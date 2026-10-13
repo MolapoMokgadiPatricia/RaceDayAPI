@@ -32,7 +32,18 @@ namespace RaceDayAPI.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "All required fields must be provided."
+                    message = "First name, last name, email and password are required."
+                });
+            }
+
+            if (request.FirstName.Trim().Length > 50 ||
+                request.LastName.Trim().Length > 50 ||
+                request.Email.Trim().Length > 100 ||
+                request.Password.Length < 8)
+            {
+                return BadRequest(new
+                {
+                    message = "Names must not exceed 50 characters, email must not exceed 100 characters, and password must contain at least 8 characters."
                 });
             }
 
@@ -49,7 +60,7 @@ namespace RaceDayAPI.Controllers
                 });
             }
 
-            string role = request.Role?.Trim() ?? "";
+            string role = request.Role?.Trim() ?? "Participant";
 
             if (role != "Participant" && role != "Organiser")
             {
@@ -59,52 +70,77 @@ namespace RaceDayAPI.Controllers
                 });
             }
 
-            var user = new User
+            if (request.PhoneNumber?.Length > 20)
             {
-                FirstName = request.FirstName.Trim(),
-                LastName = request.LastName.Trim(),
-                Email = email,
-                PasswordHash = _passwordService.HashPassword(
-                    request.Password),
-                Role = role,
-                PhoneNumber = request.PhoneNumber,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            if (user.Role == "Organiser")
-            {
-                var organiser = new Organiser
+                return BadRequest(new
                 {
-                    OrganiserID = user.UserID,
-                    OrganisationName = $"{user.FirstName} {user.LastName}"
-                };
-
-                _context.Organisers.Add(organiser);
-                await _context.SaveChangesAsync();
-            }
-            if ( user.Role == "Organiser")
-            {
-                var organiser = new Organiser
-                {
-                    OrganiserID = user.UserID,
-                    OrganisationName = $"{user.FirstName} {user.LastName}"
-                };
-                _context.Organisers.Add(organiser);
-                await _context.SaveChangesAsync();
+                    message = "Phone number must not exceed 20 characters."
+                });
             }
 
-            return Ok(new
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                message = "Registration successful.",
-                user.UserID,
-                user.FirstName,
-                user.LastName,
-                user.Email,
-                user.Role
-            });
+                var user = new User
+                {
+                    FirstName = request.FirstName.Trim(),
+                    LastName = request.LastName.Trim(),
+                    Email = email,
+                    PasswordHash = _passwordService.HashPassword(
+                        request.Password),
+                    Role = role,
+                    PhoneNumber = request.PhoneNumber?.Trim(),
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                if (role == "Organiser")
+                {
+                    var organiser = new Organiser
+                    {
+                        OrganiserID = user.UserID,
+                        OrganisationName =
+                            $"{user.FirstName} {user.LastName}"
+                    };
+
+                    _context.Organisers.Add(organiser);
+                }
+                else
+                {
+                    var participant = new Participant
+                    {
+                        ParticipantID = user.UserID
+                    };
+
+                    _context.Participants.Add(participant);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "Registration successful.",
+                    user.UserID,
+                    user.FirstName,
+                    user.LastName,
+                    user.Email,
+                    user.Role
+                });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+
+                return StatusCode(500, new
+                {
+                    message = "Registration failed. Please try again."
+                });
+            }
         }
 
         [HttpPost("login")]
@@ -123,8 +159,7 @@ namespace RaceDayAPI.Controllers
             string email = request.Email.Trim().ToLowerInvariant();
 
             var user = await _context.Users
-                .FirstOrDefaultAsync(u =>
-                    u.Email.ToLower() == email);
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
             if (user == null ||
                 !_passwordService.VerifyPassword(
@@ -136,6 +171,42 @@ namespace RaceDayAPI.Controllers
                 });
             }
 
+            // Verify that the user's profile exists.
+            if (user.Role == "Organiser")
+            {
+                bool profileExists = await _context.Organisers
+                    .AnyAsync(o => o.OrganiserID == user.UserID);
+
+                if (!profileExists)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "Organiser profile is missing."
+                    });
+                }
+            }
+            else if (user.Role == "Participant")
+            {
+                bool profileExists = await _context.Participants
+                    .AnyAsync(p => p.ParticipantID == user.UserID);
+
+                if (!profileExists)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "Participant profile is missing."
+                    });
+                }
+            }
+            else
+            {
+                return Unauthorized(new
+                {
+                    message = "Invalid user role."
+                });
+            }
+
+            HttpContext.Session.Clear();
             HttpContext.Session.SetInt32("UserID", user.UserID);
             HttpContext.Session.SetString("Role", user.Role);
 
@@ -164,17 +235,17 @@ namespace RaceDayAPI.Controllers
 
     public class RegisterRequest
     {
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
         public string Role { get; set; } = "Participant";
         public string? PhoneNumber { get; set; }
     }
 
     public class LoginRequest
     {
-        public string Email { get; set; } = "";
-        public string Password { get; set; } = "";
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }
