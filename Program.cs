@@ -1,6 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using RaceDayAPI.Data;
+using RaceDayAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,8 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
+// Password service 
+builder.Services.AddScoped<PasswordService>();
 // Add services to the container
 builder.Services.AddControllers();
 
