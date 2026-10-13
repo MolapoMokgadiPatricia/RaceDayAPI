@@ -20,6 +20,7 @@ namespace RaceDayAPI.Controllers
         public async Task<ActionResult<IEnumerable<User>>> GetUsers()
         {
             var users = await _context.Users
+                .AsNoTracking()
                 .Select(user => new User
                 {
                     UserID = user.UserID,
@@ -35,10 +36,11 @@ namespace RaceDayAPI.Controllers
             return Ok(users);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
             var user = await _context.Users
+                .AsNoTracking()
                 .Where(user => user.UserID == id)
                 .Select(user => new User
                 {
@@ -54,7 +56,7 @@ namespace RaceDayAPI.Controllers
 
             if (user == null)
             {
-                return NotFound();
+                return NotFound(new { message = "User not found." });
             }
 
             return Ok(user);
