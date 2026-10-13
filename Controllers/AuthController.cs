@@ -74,6 +74,28 @@ namespace RaceDayAPI.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            if (user.Role == "Organiser")
+            {
+                var organiser = new Organiser
+                {
+                    OrganiserID = user.UserID,
+                    OrganisationName = $"{user.FirstName} {user.LastName}"
+                };
+
+                _context.Organisers.Add(organiser);
+                await _context.SaveChangesAsync();
+            }
+            if ( user.Role == "Organiser")
+            {
+                var organiser = new Organiser
+                {
+                    OrganiserID = user.UserID,
+                    OrganisationName = $"{user.FirstName} {user.LastName}"
+                };
+                _context.Organisers.Add(organiser);
+                await _context.SaveChangesAsync();
+            }
+
             return Ok(new
             {
                 message = "Registration successful.",
