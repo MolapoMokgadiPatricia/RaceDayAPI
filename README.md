@@ -1,40 +1,52 @@
 RaceDay API
-A RESTful Web API for the RaceDay event management system — a platform for managing road running, walking, and cycling events in South Africa.
 
-Built with ASP.NET Core 8, Entity Framework Core, and SQL Server.
+RaceDay API is a RESTful Web API developed for an event management system that supports road running, walking, and cycling events in South Africa.
 
-What It Does
-RaceDay lets organisers create events and participants enter them. There are two user roles:
+The system allows organisers to manage events, categories, participant enrolments, and race results. Participants can browse events, enrol in events, and view their enrolments and results.
 
-Organiser — creates/edits/deletes events, manages categories, captures results, views enrolments
+The API is built using ASP.NET Core 8, Entity Framework Core 8, and SQL Server, with role-based access control to protect authorised operations.
 
-Participant — browses events, enters events, views their own enrolments and results
-
-Role-based access is enforced at the API level. Organisers can't access Participant-only endpoints and vice versa.
-
-Tech Stack
-ASP.NET Core 8 Web API
-
-Entity Framework Core 8 (Code-First)
-
-SQL Server
-
-Session-based authentication
-
-Swagger / OpenAPI
-
-xUnit for testing
-
-GitHub Actions for CI
-
+Features
+Organiser
+Create, view, update, and delete events.
+Manage event categories.
+View enrolments for events.
+Capture, update, and delete race results.
+View registered users.
+Participant
+Browse available events and categories.
+Enrol in events.
+View personal enrolments.
+View race results.
+Manage personal profile information.
+Additional Features
+RESTful API architecture.
+Session-based authentication.
+Role-based authorisation.
+Password hashing using PBKDF2-SHA256.
+Database management using Entity Framework Core.
+API documentation using Swagger/OpenAPI.
+Automated unit testing using xUnit.
+Continuous integration using GitHub Actions.
+Technology Stack
+Backend: ASP.NET Core 8 Web API
+Programming Language: C#
+Database: Microsoft SQL Server
+ORM: Entity Framework Core 8 (Code-First)
+Authentication: Session-based authentication
+API Documentation: Swagger/OpenAPI
+Testing: xUnit
+CI/CD: GitHub Actions
+Version Control: Git and GitHub
 Project Structure
-text
 RaceDayAPISolution/
-├── .github/workflows/dotnet.yml     # CI workflow
+├── .github/
+│   └── workflows/
+│       └── dotnet.yml
 ├── docs/
-│   ├── RaceDay.png                  # ERD diagram
-│   └── RaceDayDatabase.sql          # Database script
-├── RaceDayAPI/                      # API project
+│   ├── RaceDay.png
+│   └── RaceDayDatabase.sql
+├── RaceDayAPI/
 │   ├── Attributes/
 │   ├── Controllers/
 │   ├── Data/
@@ -43,138 +55,96 @@ RaceDayAPISolution/
 │   ├── Services/
 │   ├── Program.cs
 │   └── RaceDayAPI.csproj
-├── RaceDayAPI.Tests/                # Unit tests
+├── RaceDayAPI.Tests/
 └── RaceDayAPI.sln
-How to Run It
-1. Requirements
-.NET 8 SDK
-
-SQL Server Express or LocalDB
-
-Visual Studio 2022 (or VS Code)
-
-Git
-
-2. Clone the repo
-bash
-git clone https://github.com/MolapoMokgadiPatricia/RaceDayAPI.git
-cd RaceDayAPI
-3. Set up the database
-Open RaceDayAPI/appsettings.json and change the connection string to match your SQL Server:
-
-json
-"Server=YOUR_SERVER_NAME\\SQLEXPRESS;Database=RaceDayDB;Trusted_Connection=True;TrustServerCertificate=True;"
-Then run the SQL script in docs/RaceDayDatabase.sql in SQL Server Management Studio (SSMS).
-
-4. Run the API
-bash
-cd RaceDayAPI
-dotnet run
-5. Open Swagger
-Go to https://localhost:7XXX/swagger in your browser (check the console for the exact port).
-
-You can test every endpoint from there.
 
 API Endpoints
-Auth
-Method	Route	Role	Description
-POST	/api/auth/register	Public	Register as Organiser or Participant
-POST	/api/auth/login	Public	Log in
-POST	/api/auth/logout	Any	Log out
-GET	/api/auth/me	Any	Get current user
-Events
-Method	Route	Role	Description
-GET	/api/events	Public	List all events
-GET	/api/events/{id}	Public	Get one event
-POST	/api/events	Organiser	Create event
-PUT	/api/events/{id}	Organiser	Update own event
-DELETE	/api/events/{id}	Organiser	Delete own event
-Categories
-Method	Route	Role	Description
-GET	/api/categories	Public	List all
-GET	/api/categories/{id}	Public	Get one
-GET	/api/categories/event/{eventId}	Public	Categories for event
-POST	/api/categories	Organiser	Create
-PUT	/api/categories/{id}	Organiser	Update own
-DELETE	/api/categories/{id}	Organiser	Delete own
-Enrolments
-Method	Route	Role	Description
-GET	/api/enrolments	Organiser	Own events
-GET	/api/enrolments/{id}	Any	Get one
-GET	/api/enrolments/participant/{participantId}	Any	Participant's enrolments
-GET	/api/enrolments/event/{eventId}	Organiser	Event enrolments
-POST	/api/enrolments	Participant	Enrol in event
-PUT	/api/enrolments/{id}	Any	Update
-DELETE	/api/enrolments/{id}	Any	Delete
-Results
-Method	Route	Role	Description
-GET	/api/results	Any	View results
-GET	/api/results/{id}	Any	Get one
-GET	/api/results/enrolment/{enrolmentId}	Any	Result for enrolment
-POST	/api/results	Organiser	Capture result
-PUT	/api/results/{id}	Organiser	Update
-DELETE	/api/results/{id}	Organiser	Delete
-Users
-Method	Route	Role	Description
-GET	/api/users	Organiser	List all users
-GET	/api/users/{id}	Any	Own profile
-PUT	/api/users/{id}	Any	Update own profile
-Authentication
-Register at /api/auth/register — choose "Organiser" or "Participant"
+Module	Method	Endpoint	Access
+Authentication	POST	/api/auth/register	Public
+Authentication	POST	/api/auth/login	Public
+Authentication	POST	/api/auth/logout	Authenticated
+Authentication	GET	/api/auth/me	Authenticated
+Events	GET	/api/events	Public
+Events	GET	/api/events/{id}	Public
+Events	POST	/api/events	Organiser
+Events	PUT	/api/events/{id}	Organiser
+Events	DELETE	/api/events/{id}	Organiser
+Categories	GET	/api/categories	Public
+Categories	POST	/api/categories	Organiser
+Categories	PUT	/api/categories/{id}	Organiser
+Categories	DELETE	/api/categories/{id}	Organiser
+Enrolments	GET	/api/enrolments	Organiser
+Enrolments	GET	/api/enrolments/{id}	Authenticated
+Enrolments	POST	/api/enrolments	Participant
+Enrolments	GET	/api/enrolments/event/{eventId}	Organiser
+Results	GET	/api/results	Authenticated
+Results	GET	/api/results/{id}	Authenticated
+Results	POST	/api/results	Organiser
+Results	PUT	/api/results/{id}	Organiser
+Results	DELETE	/api/results/{id}	Organiser
+Users	GET	/api/users	Organiser
+Users	GET	/api/users/{id}	Authenticated
+Users	PUT	/api/users/{id}	Authenticated
 
-Log in at /api/auth/login — session is created
+Note: The access levels shown represent the intended permissions and should match the application's implemented authorisation and ownership checks.
 
-Session cookie handles subsequent requests
+Authentication and Security
 
-Passwords are hashed with PBKDF2-SHA256
+RaceDay API uses session-based authentication to manage user sessions.
 
+Users can register as either an Organiser or a Participant.
+Authenticated sessions are maintained using session cookies.
+Passwords are hashed using PBKDF2-SHA256.
+Role-based authorisation restricts access to protected API endpoints.
+Ownership checks help protect user-specific resources.
 Testing
-bash
-dotnet test
-Tests cover:
 
-Password hashing and verification
+The project uses xUnit to test key application functionality, including:
 
-Registration (valid, duplicate, invalid)
+Password hashing and verification.
+User registration and duplicate registration handling.
+Login validation.
+Role-based access control.
+CRUD operations.
+Resource ownership and authorisation checks.
 
-Login (correct, wrong password, unknown user)
+Run the automated test suite using dotnet test.
 
-Role enforcement on all controllers
+Continuous Integration
 
-CRUD operations and ownership checks
+GitHub Actions automates the project's quality checks whenever code is pushed to the repository.
 
-CI/CD
-GitHub Actions runs on every push. The workflow:
+The workflow:
 
-Builds the solution
+Builds the .NET solution.
+Runs the automated unit tests.
+Verifies the required database documentation files.
 
-Runs all unit tests
+Workflow file: .github/workflows/dotnet.yml
 
-Verifies the /docs folder has the ERD and SQL script
-
-Green Build Screenshot
-https://docs/ci-screenshot.png
-
-Video Demo
-Watch the walkthrough: https://youtu.be/YOUR_VIDEO_ID_HERE
-
+Documentation
+Entity Relationship Diagram (ERD): docs/RaceDay.png
+Database SQL Script: docs/RaceDayDatabase.sql
+CI Build Screenshot: Add the verified screenshot link here.
+Video Demonstration: Add the actual YouTube video link here.
 Author
+
 Name: Molapo Mokgadi Patricia
 Student Number: ST10487723
 Module: PROG6212 — Programming 2B
-Institution: The Independent Institute of Education (IIE)GitHub: @MolapoMokgadiPatricia
+Institution: The Independent Institute of Education (IIE)
+GitHub: @MolapoMokgadiPatricia
 Year: 2026
 
+AI Tools Used
 
-AI tools used:
-
-Claude (Anthropic) — for code review, debugging assistance, and guidance on ASP.NET Core best practices.
-
+Claude (Anthropic) was used for code review, debugging assistance, and guidance on ASP.NET Core best practices.
 
 References
+
 Anthropic, 2026. Claude AI assistant [Online]. Available at: https://claude.ai [Accessed 15 October 2026].
 
-GitHub, 2026. GitHub Actions Documentation [Online]. Available at: https://docs.github.com/en/actions [Accessed 15 October 2026].
+GitHub, 2026. GitHub Actions documentation [Online]. Available at: https://docs.github.com/en/actions [Accessed 15 October 2026].
 
 Kalpin, N. and Lander, R., 2023. Pro ASP.NET Core 7. 10th ed. New York: Apress.
 
@@ -195,4 +165,3 @@ RFC Editor, 2000. RFC 2898: PKCS #5: Password-Based Cryptography Specification V
 Swagger, 2026. OpenAPI Specification [Online]. Available at: https://swagger.io/specification/ [Accessed 15 October 2026].
 
 xUnit.net, 2026. xUnit.net documentation [Online]. Available at: https://xunit.net/ [Accessed 15 October 2026].
-
