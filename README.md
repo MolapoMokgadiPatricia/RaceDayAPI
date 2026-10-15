@@ -5,42 +5,35 @@ The platform is built using ASP.NET Core 8, Entity Framework Core 8, and Microso
 
 ## Technology Stack
 • Backend Framework: ASP.NET Core 8.0 Web API
-• Programming Language: C# 12
-• Database Engine: Microsoft SQL Server
-• ORM Mapping: Entity Framework Core 8 (Code-First Strategy)
-• Identity Management: Session-Based Cookie State Infrastructure
-• API Metrics / UI: Swagger Tooling / OpenAPI Specification
-• Testing Engine: xUnit Test Framework
-• CI/CD Lifecycle: GitHub Actions Pipelines
-• Source Tracking: Git & GitHub
 
-## RaceDayAPISolution/
-├── .github/
-│   └── workflows/
-│       └── dotnet.yml         # GitHub Actions CI pipeline configuration
-├── docs/
-│   ├── RaceDay.png            # Entity Relationship Diagram (ERD) visual asset
-│   └── RaceDayDatabase.sql    # Relational Database Schema export script
-├── RaceDayAPI/
-│   ├── Attributes/            # Custom validation & authorization logic components
-│   ├── Controllers/           # REST Controller Endpoints handling incoming HTTP requests
-│   ├── Data/                  # DbContext mapping definitions & initial migration scripts
-│   ├── Extensions/            # Service registration and helper extension modules
-│   ├── Models/                # Domain Entities, Database Models, and Data Transfer Objects (DTOs)
-│   ├── Services/              # Core business workflow layer and cryptographic components
-│   ├── Program.cs             # Application bootstrap file configuring pipeline services
-│   └── RaceDayAPI.csproj      # Primary ASP.NET Project configuration manifest
-├── RaceDayAPI.Tests/          # Isolation testing project implementing xUnit specifications
-└── RaceDayAPI.sln             # Unified Visual Studio Solution container file
+• Programming Language: C# 12
+
+• Database Engine: Microsoft SQL Server
+
+• ORM Mapping: Entity Framework Core 8 (Code-First Strategy)
+
+• Identity Management: Session-Based Cookie State Infrastructure
+
+• API Metrics / UI: Swagger Tooling / OpenAPI Specification
+
+• Testing Engine: xUnit Test Framework
+
+• CI/CD Lifecycle: GitHub Actions Pipelines
+
+• Source Tracking: Git & GitHub
 
 
 ## Project Metadata & Submission Verification
 • Author Name: Molapo Mokgadi Patricia
+
 • Student Identification Number: ST10487723
+
 • Module: PROG6212 — Programming 2B
+
 • GitHub: @MolapoMokgadiPatricia
 
 ## GITHUB ACTION SCREENSHOT 
+<img width="655" height="161" alt="image" src="https://github.com/user-attachments/assets/f3ea904d-003f-4c70-9f27-2e41759b90ed" />
 
 ## YOUTUBE LINK 
 
@@ -50,14 +43,26 @@ Claude (Anthropic): Utilized for structural syntax refinement, environment revie
 ## REFERENCES
 
 • Anthropic, 2026. Claude AI assistant [Online]. Available at: https://claude.ai [Accessed 15 October 2026].
+
 • GitHub, 2026. GitHub Actions documentation [Online]. Available at: https://docs.github.com/en/actions [Accessed 15 October 2026].
+
 • Kalpin, N. and Lander, R., 2023. Pro ASP.NET Core 7. 10th ed. New York: Apress.
+
 • Microsoft, 2026a. ASP.NET Core documentation [Online]. Available at: https://learn.microsoft.com/en-us/aspnet/core/ [Accessed 15 October 2026].
+
 • Microsoft, 2026b. Entity Framework Core documentation [Online]. Available at: https://learn.microsoft.com/en-us/ef/core/ [Accessed 15 October 2026].
+
 • Microsoft, 2026c. Session and state management in ASP.NET Core [Online]. Available at: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/app-state [Accessed 15 October 2026].
+
 • Moriarty, K., Kalpin, N. and Lander, R., 2022. .NET MAUI and ASP.NET Core: Modern Web Development. Sebastopol, CA: O'Reilly Media.
+
 • Mozilla, 2026. HTTP authentication [Online]. Available at: https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication [Accessed 15 October 2026].
+
 • OWASP Foundation, 2024. Password Storage Cheat Sheet [Online]. Available at: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html [Accessed 15 October 2026].
+
 • RFC Editor, 2000. RFC 2898: PKCS #5: Password-Based Cryptography Specification Version 2.0 [Online]. Available at: https://datatracker.ietf.org/doc/html/rfc2898 [Accessed 15 October 2026].
+
 • Swagger, 2026. OpenAPI Specification [Online]. Available at: https://swagger.io/specification/ [Accessed 15 October 2026].
+
 • xUnit.net, 2026. xUnit.net documentation [Online]. Available at: https://xunit.net/ [Accessed 15 October 2026].
+
