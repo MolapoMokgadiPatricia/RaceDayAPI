@@ -5,11 +5,10 @@
 [Rr]elease/
 *.user
 *.suo
+*.userosscache
 
 # Visual Studio
 .vs/
-*.userosscache
-*.sln.docstates
 
 # Rider
 .idea/
@@ -30,3 +29,6 @@ Thumbs.db
 *.trx
 coverage*.json
 coverage*.xml
+
+# Logs
+*.log
