@@ -171,7 +171,6 @@ namespace RaceDayAPI.Controllers
                 });
             }
 
-            // Verify that the user's profile exists.
             if (user.Role == "Organiser")
             {
                 bool profileExists = await _context.Organisers
