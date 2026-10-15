@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RaceDayAPI.Models
@@ -8,6 +7,7 @@ namespace RaceDayAPI.Models
     public class Participant
     {
         [Key]
+        [ForeignKey(nameof(User))]
         public int ParticipantID { get; set; }
 
         public DateTime? DateOfBirth { get; set; }
@@ -18,7 +18,10 @@ namespace RaceDayAPI.Models
         [StringLength(20)]
         public string? EmergencyContactPhone { get; set; }
 
-        [StringLength(255)]
+        [StringLength(500)]
         public string? ProfilePictureUrl { get; set; }
+
+        public User? User { get; set; }
+        public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }

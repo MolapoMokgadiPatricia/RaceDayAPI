@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
+using RaceDayAPI.Extensions;
 using RaceDayAPI.Models;
 using RaceDayAPI.Services;
 
@@ -13,17 +15,14 @@ namespace RaceDayAPI.Controllers
         private readonly RaceDayContext _context;
         private readonly PasswordService _passwordService;
 
-        public AuthController(
-            RaceDayContext context,
-            PasswordService passwordService)
+        public AuthController(RaceDayContext context, PasswordService passwordService)
         {
             _context = context;
             _passwordService = passwordService;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(
-            [FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.FirstName) ||
                 string.IsNullOrWhiteSpace(request.LastName) ||
@@ -78,8 +77,7 @@ namespace RaceDayAPI.Controllers
                 });
             }
 
-            await using var transaction =
-                await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -88,8 +86,7 @@ namespace RaceDayAPI.Controllers
                     FirstName = request.FirstName.Trim(),
                     LastName = request.LastName.Trim(),
                     Email = email,
-                    PasswordHash = _passwordService.HashPassword(
-                        request.Password),
+                    PasswordHash = _passwordService.HashPassword(request.Password),
                     Role = role,
                     PhoneNumber = request.PhoneNumber?.Trim(),
                     CreatedAt = DateTime.UtcNow
@@ -100,23 +97,18 @@ namespace RaceDayAPI.Controllers
 
                 if (role == "Organiser")
                 {
-                    var organiser = new Organiser
+                    _context.Organisers.Add(new Organiser
                     {
                         OrganiserID = user.UserID,
-                        OrganisationName =
-                            $"{user.FirstName} {user.LastName}"
-                    };
-
-                    _context.Organisers.Add(organiser);
+                        OrganisationName = $"{user.FirstName} {user.LastName}"
+                    });
                 }
                 else
                 {
-                    var participant = new Participant
+                    _context.Participants.Add(new Participant
                     {
                         ParticipantID = user.UserID
-                    };
-
-                    _context.Participants.Add(participant);
+                    });
                 }
 
                 await _context.SaveChangesAsync();
@@ -135,17 +127,12 @@ namespace RaceDayAPI.Controllers
             catch
             {
                 await transaction.RollbackAsync();
-
-                return StatusCode(500, new
-                {
-                    message = "Registration failed. Please try again."
-                });
+                return StatusCode(500, new { message = "Registration failed. Please try again." });
             }
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(
-            [FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password))
@@ -162,48 +149,32 @@ namespace RaceDayAPI.Controllers
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
             if (user == null ||
-                !_passwordService.VerifyPassword(
-                    request.Password, user.PasswordHash))
+                !_passwordService.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid email or password."
-                });
+                return Unauthorized(new { message = "Invalid email or password." });
             }
 
-            // Verify that the user's profile exists.
             if (user.Role == "Organiser")
             {
                 bool profileExists = await _context.Organisers
                     .AnyAsync(o => o.OrganiserID == user.UserID);
-
                 if (!profileExists)
                 {
-                    return StatusCode(500, new
-                    {
-                        message = "Organiser profile is missing."
-                    });
+                    return StatusCode(500, new { message = "Organiser profile is missing." });
                 }
             }
             else if (user.Role == "Participant")
             {
                 bool profileExists = await _context.Participants
                     .AnyAsync(p => p.ParticipantID == user.UserID);
-
                 if (!profileExists)
                 {
-                    return StatusCode(500, new
-                    {
-                        message = "Participant profile is missing."
-                    });
+                    return StatusCode(500, new { message = "Participant profile is missing." });
                 }
             }
             else
             {
-                return Unauthorized(new
-                {
-                    message = "Invalid user role."
-                });
+                return Unauthorized(new { message = "Invalid user role." });
             }
 
             HttpContext.Session.Clear();
@@ -225,11 +196,36 @@ namespace RaceDayAPI.Controllers
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
+            return Ok(new { message = "Logout successful." });
+        }
 
-            return Ok(new
+        [HttpGet("me")]
+        [AuthorizeRole]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            int userId = HttpContext.GetUserId();
+
+            var user = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.UserID == userId)
+                .Select(u => new
+                {
+                    u.UserID,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.Role,
+                    u.PhoneNumber,
+                    u.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (user == null)
             {
-                message = "Logout successful."
-            });
+                return NotFound(new { message = "User not found." });
+            }
+
+            return Ok(user);
         }
     }
 

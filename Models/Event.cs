@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RaceDayAPI.Models
@@ -16,7 +16,7 @@ namespace RaceDayAPI.Models
         [StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
-        [StringLength(255)]
+        [StringLength(500)]
         public string? Description { get; set; }
 
         [Required]
@@ -27,6 +27,7 @@ namespace RaceDayAPI.Models
         public string Location { get; set; } = string.Empty;
 
         [Required]
+        [Range(0.01, 999.99)]
         [Column(TypeName = "decimal(5,2)")]
         public decimal DistanceKm { get; set; }
 
@@ -34,9 +35,13 @@ namespace RaceDayAPI.Models
         [StringLength(50)]
         public string EventType { get; set; } = string.Empty;
 
-        [StringLength(255)]
+        [StringLength(500)]
         public string? BannerImageUrl { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public Organiser? Organiser { get; set; }
+        public ICollection<Category> Categories { get; set; } = new List<Category>();
+        public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }

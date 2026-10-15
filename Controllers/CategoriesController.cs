@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
+using RaceDayAPI.Extensions;
 using RaceDayAPI.Models;
 
 namespace RaceDayAPI.Controllers
@@ -16,16 +18,6 @@ namespace RaceDayAPI.Controllers
             _context = context;
         }
 
-        private int? GetUserID()
-        {
-            return HttpContext.Session.GetInt32("UserID");
-        }
-
-        private string? GetUserRole()
-        {
-            return HttpContext.Session.GetString("Role");
-        }
-
         [HttpGet]
         public async Task<IActionResult> GetCategories()
         {
@@ -38,7 +30,7 @@ namespace RaceDayAPI.Controllers
             return Ok(categories);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetCategory(int id)
         {
             var category = await _context.Categories
@@ -47,16 +39,13 @@ namespace RaceDayAPI.Controllers
 
             if (category == null)
             {
-                return NotFound(new
-                {
-                    message = "Category not found."
-                });
+                return NotFound(new { message = "Category not found." });
             }
 
             return Ok(category);
         }
 
-        [HttpGet("event/{eventId}")]
+        [HttpGet("event/{eventId:int}")]
         public async Task<IActionResult> GetCategoriesByEvent(int eventId)
         {
             bool eventExists = await _context.Events
@@ -64,10 +53,7 @@ namespace RaceDayAPI.Controllers
 
             if (!eventExists)
             {
-                return NotFound(new
-                {
-                    message = "Event not found."
-                });
+                return NotFound(new { message = "Event not found." });
             }
 
             var categories = await _context.Categories
@@ -80,26 +66,10 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateCategory(
-            [FromBody] Category category)
+        [AuthorizeRole("Organiser")]
+        public async Task<IActionResult> CreateCategory([FromBody] Category category)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can create categories."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             if (!ModelState.IsValid)
             {
@@ -121,13 +91,10 @@ namespace RaceDayAPI.Controllers
 
             if (raceEvent == null)
             {
-                return BadRequest(new
-                {
-                    message = "The specified event does not exist."
-                });
+                return BadRequest(new { message = "The specified event does not exist." });
             }
 
-            if (raceEvent.OrganiserID != userID.Value)
+            if (raceEvent.OrganiserID != userId)
             {
                 return StatusCode(403, new
                 {
@@ -136,38 +103,17 @@ namespace RaceDayAPI.Controllers
             }
 
             category.CategoryID = 0;
-
             _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetCategory),
-                new { id = category.CategoryID },
-                category);
+            return CreatedAtAction(nameof(GetCategory), new { id = category.CategoryID }, category);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCategory(
-            int id,
-            [FromBody] Category updatedCategory)
+        [HttpPut("{id:int}")]
+        [AuthorizeRole("Organiser")]
+        public async Task<IActionResult> UpdateCategory(int id, [FromBody] Category updatedCategory)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can update categories."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             if (!ModelState.IsValid)
             {
@@ -189,17 +135,13 @@ namespace RaceDayAPI.Controllers
 
             if (existingCategory == null)
             {
-                return NotFound(new
-                {
-                    message = "Category not found."
-                });
+                return NotFound(new { message = "Category not found." });
             }
 
             var existingEvent = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventID == existingCategory.EventID);
 
-            if (existingEvent == null ||
-                existingEvent.OrganiserID != userID.Value)
+            if (existingEvent == null || existingEvent.OrganiserID != userId)
             {
                 return StatusCode(403, new
                 {
@@ -225,43 +167,24 @@ namespace RaceDayAPI.Controllers
             return Ok(existingCategory);
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
+        [AuthorizeRole("Organiser")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can delete categories."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             var category = await _context.Categories
                 .FirstOrDefaultAsync(c => c.CategoryID == id);
 
             if (category == null)
             {
-                return NotFound(new
-                {
-                    message = "Category not found."
-                });
+                return NotFound(new { message = "Category not found." });
             }
 
             var raceEvent = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventID == category.EventID);
 
-            if (raceEvent == null ||
-                raceEvent.OrganiserID != userID.Value)
+            if (raceEvent == null || raceEvent.OrganiserID != userId)
             {
                 return StatusCode(403, new
                 {
@@ -283,10 +206,7 @@ namespace RaceDayAPI.Controllers
             _context.Categories.Remove(category);
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Category deleted successfully."
-            });
+            return Ok(new { message = "Category deleted successfully." });
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RaceDayAPI.Models
@@ -34,6 +33,9 @@ namespace RaceDayAPI.Models
         [StringLength(20)]
         public string? PhoneNumber { get; set; }
 
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public Organiser? Organiser { get; set; }
+        public Participant? Participant { get; set; }
     }
 }

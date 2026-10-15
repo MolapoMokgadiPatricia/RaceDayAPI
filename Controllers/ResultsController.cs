@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
+using RaceDayAPI.Extensions;
 using RaceDayAPI.Models;
 
 namespace RaceDayAPI.Controllers
@@ -17,19 +19,42 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpGet]
+        [AuthorizeRole]
         public async Task<IActionResult> GetResults()
         {
-            var results = await _context.Results
+            int userId = HttpContext.GetUserId();
+
+            if (HttpContext.IsOrganiser())
+            {
+                var organiserResults = await _context.Results
+                    .AsNoTracking()
+                    .Where(r => _context.Enrolments
+                        .Any(e => e.EnrolmentID == r.EnrolmentID &&
+                                  _context.Events.Any(ev => ev.EventID == e.EventID &&
+                                                            ev.OrganiserID == userId)))
+                    .OrderBy(r => r.ResultID)
+                    .ToListAsync();
+
+                return Ok(organiserResults);
+            }
+
+            var participantResults = await _context.Results
                 .AsNoTracking()
+                .Where(r => _context.Enrolments
+                    .Any(e => e.EnrolmentID == r.EnrolmentID &&
+                              e.ParticipantID == userId))
                 .OrderBy(r => r.ResultID)
                 .ToListAsync();
 
-            return Ok(results);
+            return Ok(participantResults);
         }
 
         [HttpGet("{id:int}")]
+        [AuthorizeRole]
         public async Task<IActionResult> GetResult(int id)
         {
+            int userId = HttpContext.GetUserId();
+
             var result = await _context.Results
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.ResultID == id);
@@ -39,18 +64,65 @@ namespace RaceDayAPI.Controllers
                 return NotFound(new { message = "Result not found." });
             }
 
+            var enrolment = await _context.Enrolments
+                .FirstOrDefaultAsync(e => e.EnrolmentID == result.EnrolmentID);
+
+            if (enrolment == null)
+            {
+                return NotFound(new { message = "Associated enrolment not found." });
+            }
+
+            if (HttpContext.IsParticipant() && enrolment.ParticipantID != userId)
+            {
+                return StatusCode(403, new { message = "You can only view your own results." });
+            }
+
+            if (HttpContext.IsOrganiser())
+            {
+                bool ownsEvent = await _context.Events
+                    .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+                if (!ownsEvent)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "You can only view results for your own events."
+                    });
+                }
+            }
+
             return Ok(result);
         }
 
         [HttpGet("enrolment/{enrolmentId:int}")]
+        [AuthorizeRole]
         public async Task<IActionResult> GetResultByEnrolment(int enrolmentId)
         {
-            var enrolmentExists = await _context.Enrolments
-                .AnyAsync(e => e.EnrolmentID == enrolmentId);
+            int userId = HttpContext.GetUserId();
 
-            if (!enrolmentExists)
+            var enrolment = await _context.Enrolments
+                .FirstOrDefaultAsync(e => e.EnrolmentID == enrolmentId);
+
+            if (enrolment == null)
             {
                 return NotFound(new { message = "Enrolment not found." });
+            }
+
+            if (HttpContext.IsParticipant() && enrolment.ParticipantID != userId)
+            {
+                return StatusCode(403, new { message = "You can only view your own results." });
+            }
+
+            if (HttpContext.IsOrganiser())
+            {
+                bool ownsEvent = await _context.Events
+                    .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+                if (!ownsEvent)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "You can only view results for your own events."
+                    });
+                }
             }
 
             var result = await _context.Results
@@ -59,15 +131,21 @@ namespace RaceDayAPI.Controllers
 
             if (result == null)
             {
-                return NotFound(new { message = "No result has been recorded for this enrolment." });
+                return NotFound(new
+                {
+                    message = "No result has been recorded for this enrolment."
+                });
             }
 
             return Ok(result);
         }
 
         [HttpPost]
+        [AuthorizeRole("Organiser")]
         public async Task<IActionResult> CreateResult([FromBody] Result result)
         {
+            int userId = HttpContext.GetUserId();
+
             if (result.EnrolmentID <= 0)
             {
                 return BadRequest(new { message = "A valid EnrolmentID is required." });
@@ -81,33 +159,51 @@ namespace RaceDayAPI.Controllers
                 return BadRequest(new { message = "The enrolment does not exist." });
             }
 
+            bool ownsEvent = await _context.Events
+                .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+
+            if (!ownsEvent)
+            {
+                return StatusCode(403, new
+                {
+                    message = "You can only capture results for your own events."
+                });
+            }
+
             var existingResult = await _context.Results
                 .AnyAsync(r => r.EnrolmentID == result.EnrolmentID);
 
             if (existingResult)
             {
-                return Conflict(new { message = "A result already exists for this enrolment." });
+                return Conflict(new
+                {
+                    message = "A result already exists for this enrolment."
+                });
             }
 
             if (result.FinishPosition.HasValue && result.FinishPosition.Value <= 0)
             {
-                return BadRequest(new { message = "FinishPosition must be greater than zero." });
+                return BadRequest(new
+                {
+                    message = "FinishPosition must be greater than zero."
+                });
             }
 
+            result.ResultID = 0;
             result.RecordedAt = DateTime.UtcNow;
 
             _context.Results.Add(result);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetResult),
-                new { id = result.ResultID },
-                result);
+            return CreatedAtAction(nameof(GetResult), new { id = result.ResultID }, result);
         }
 
         [HttpPut("{id:int}")]
+        [AuthorizeRole("Organiser")]
         public async Task<IActionResult> UpdateResult(int id, [FromBody] Result updatedResult)
         {
+            int userId = HttpContext.GetUserId();
+
             var existingResult = await _context.Results
                 .FirstOrDefaultAsync(r => r.ResultID == id);
 
@@ -116,35 +212,33 @@ namespace RaceDayAPI.Controllers
                 return NotFound(new { message = "Result not found." });
             }
 
-            if (updatedResult.EnrolmentID <= 0)
+            var enrolment = await _context.Enrolments
+                .FirstOrDefaultAsync(e => e.EnrolmentID == existingResult.EnrolmentID);
+
+            if (enrolment == null)
             {
-                return BadRequest(new { message = "A valid EnrolmentID is required." });
+                return NotFound(new { message = "Associated enrolment not found." });
             }
 
-            var enrolmentExists = await _context.Enrolments
-                .AnyAsync(e => e.EnrolmentID == updatedResult.EnrolmentID);
+            bool ownsEvent = await _context.Events
+                .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
 
-            if (!enrolmentExists)
+            if (!ownsEvent)
             {
-                return BadRequest(new { message = "The enrolment does not exist." });
+                return StatusCode(403, new
+                {
+                    message = "You can only update results for your own events."
+                });
             }
 
-            var duplicate = await _context.Results.AnyAsync(r =>
-                r.ResultID != id &&
-                r.EnrolmentID == updatedResult.EnrolmentID);
-
-            if (duplicate)
+            if (updatedResult.FinishPosition.HasValue && updatedResult.FinishPosition.Value <= 0)
             {
-                return Conflict(new { message = "This enrolment already has a result." });
+                return BadRequest(new
+                {
+                    message = "FinishPosition must be greater than zero."
+                });
             }
 
-            if (updatedResult.FinishPosition.HasValue &&
-                updatedResult.FinishPosition.Value <= 0)
-            {
-                return BadRequest(new { message = "FinishPosition must be greater than zero." });
-            }
-
-            existingResult.EnrolmentID = updatedResult.EnrolmentID;
             existingResult.FinishTime = updatedResult.FinishTime;
             existingResult.FinishPosition = updatedResult.FinishPosition;
 
@@ -154,14 +248,36 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [AuthorizeRole("Organiser")]
         public async Task<IActionResult> DeleteResult(int id)
         {
+            int userId = HttpContext.GetUserId();
+
             var result = await _context.Results
                 .FirstOrDefaultAsync(r => r.ResultID == id);
 
             if (result == null)
             {
                 return NotFound(new { message = "Result not found." });
+            }
+
+            var enrolment = await _context.Enrolments
+                .FirstOrDefaultAsync(e => e.EnrolmentID == result.EnrolmentID);
+
+            if (enrolment == null)
+            {
+                return NotFound(new { message = "Associated enrolment not found." });
+            }
+
+            bool ownsEvent = await _context.Events
+                .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+
+            if (!ownsEvent)
+            {
+                return StatusCode(403, new
+                {
+                    message = "You can only delete results for your own events."
+                });
             }
 
             _context.Results.Remove(result);

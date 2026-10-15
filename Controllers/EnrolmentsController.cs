@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
+using RaceDayAPI.Extensions;
 using RaceDayAPI.Models;
 
 namespace RaceDayAPI.Controllers
@@ -17,10 +19,15 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpGet]
+        [AuthorizeRole("Organiser")]
         public async Task<IActionResult> GetEnrolments()
         {
+            int userId = HttpContext.GetUserId();
+
             var enrolments = await _context.Enrolments
                 .AsNoTracking()
+                .Where(e => _context.Events
+                    .Any(ev => ev.EventID == e.EventID && ev.OrganiserID == userId))
                 .OrderBy(e => e.EnrolmentID)
                 .ToListAsync();
 
@@ -28,8 +35,11 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [AuthorizeRole]
         public async Task<IActionResult> GetEnrolment(int id)
         {
+            int userId = HttpContext.GetUserId();
+
             var enrolment = await _context.Enrolments
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.EnrolmentID == id);
@@ -39,12 +49,38 @@ namespace RaceDayAPI.Controllers
                 return NotFound(new { message = "Enrolment not found." });
             }
 
+            if (HttpContext.IsParticipant() && enrolment.ParticipantID != userId)
+            {
+                return StatusCode(403, new { message = "You can only view your own enrolments." });
+            }
+
+            if (HttpContext.IsOrganiser())
+            {
+                bool ownsEvent = await _context.Events
+                    .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+                if (!ownsEvent)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "You can only view enrolments for your own events."
+                    });
+                }
+            }
+
             return Ok(enrolment);
         }
 
         [HttpGet("participant/{participantId:int}")]
+        [AuthorizeRole]
         public async Task<IActionResult> GetParticipantEnrolments(int participantId)
         {
+            int userId = HttpContext.GetUserId();
+
+            if (HttpContext.IsParticipant() && participantId != userId)
+            {
+                return StatusCode(403, new { message = "You can only view your own enrolments." });
+            }
+
             var participantExists = await _context.Participants
                 .AnyAsync(p => p.ParticipantID == participantId);
 
@@ -62,17 +98,44 @@ namespace RaceDayAPI.Controllers
             return Ok(enrolments);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateEnrolment(
-            [FromBody] Enrolment enrolment)
+        [HttpGet("event/{eventId:int}")]
+        [AuthorizeRole("Organiser")]
+        public async Task<IActionResult> GetEventEnrolments(int eventId)
         {
-            if (enrolment.ParticipantID <= 0 ||
-                enrolment.EventID <= 0 ||
-                enrolment.CategoryID <= 0)
+            int userId = HttpContext.GetUserId();
+
+            bool ownsEvent = await _context.Events
+                .AnyAsync(ev => ev.EventID == eventId && ev.OrganiserID == userId);
+
+            if (!ownsEvent)
+            {
+                return StatusCode(403, new
+                {
+                    message = "You can only view enrolments for your own events."
+                });
+            }
+
+            var enrolments = await _context.Enrolments
+                .AsNoTracking()
+                .Where(e => e.EventID == eventId)
+                .OrderByDescending(e => e.EnrolmentDate)
+                .ToListAsync();
+
+            return Ok(enrolments);
+        }
+
+        [HttpPost]
+        [AuthorizeRole("Participant")]
+        public async Task<IActionResult> CreateEnrolment([FromBody] Enrolment enrolment)
+        {
+            int userId = HttpContext.GetUserId();
+            enrolment.ParticipantID = userId;
+
+            if (enrolment.EventID <= 0 || enrolment.CategoryID <= 0)
             {
                 return BadRequest(new
                 {
-                    message = "Valid ParticipantID, EventID and CategoryID are required."
+                    message = "Valid EventID and CategoryID are required."
                 });
             }
 
@@ -112,27 +175,26 @@ namespace RaceDayAPI.Controllers
             {
                 return Conflict(new
                 {
-                    message = "This participant is already enrolled in this event."
+                    message = "You are already enrolled in this event."
                 });
             }
 
             enrolment.EnrolmentDate = DateTime.UtcNow;
             enrolment.Status = "Pending";
+            enrolment.EnrolmentID = 0;
 
             _context.Enrolments.Add(enrolment);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetEnrolment),
-                new { id = enrolment.EnrolmentID },
-                enrolment);
+            return CreatedAtAction(nameof(GetEnrolment), new { id = enrolment.EnrolmentID }, enrolment);
         }
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateEnrolment(
-            int id,
-            [FromBody] Enrolment updatedEnrolment)
+        [AuthorizeRole]
+        public async Task<IActionResult> UpdateEnrolment(int id, [FromBody] Enrolment updatedEnrolment)
         {
+            int userId = HttpContext.GetUserId();
+
             var existingEnrolment = await _context.Enrolments
                 .FirstOrDefaultAsync(e => e.EnrolmentID == id);
 
@@ -141,74 +203,76 @@ namespace RaceDayAPI.Controllers
                 return NotFound(new { message = "Enrolment not found." });
             }
 
-            if (updatedEnrolment.ParticipantID <= 0 ||
-                updatedEnrolment.EventID <= 0 ||
-                updatedEnrolment.CategoryID <= 0)
+            if (HttpContext.IsOrganiser())
             {
-                return BadRequest(new
+                bool ownsEvent = await _context.Events
+                    .AnyAsync(ev => ev.EventID == existingEnrolment.EventID && ev.OrganiserID == userId);
+                if (!ownsEvent)
                 {
-                    message = "Valid ParticipantID, EventID and CategoryID are required."
-                });
-            }
-
-            var participantExists = await _context.Participants
-                .AnyAsync(p => p.ParticipantID == updatedEnrolment.ParticipantID);
-
-            var eventExists = await _context.Events
-                .AnyAsync(e => e.EventID == updatedEnrolment.EventID);
-
-            var categoryExists = await _context.Categories.AnyAsync(c =>
-                c.CategoryID == updatedEnrolment.CategoryID &&
-                c.EventID == updatedEnrolment.EventID);
-
-            if (!participantExists || !eventExists || !categoryExists)
-            {
-                return BadRequest(new
-                {
-                    message = "Check that the participant, event and matching category exist."
-                });
-            }
-
-            var duplicate = await _context.Enrolments.AnyAsync(e =>
-                e.EnrolmentID != id &&
-                e.ParticipantID == updatedEnrolment.ParticipantID &&
-                e.EventID == updatedEnrolment.EventID);
-
-            if (duplicate)
-            {
-                return Conflict(new
-                {
-                    message = "This participant is already enrolled in this event."
-                });
-            }
-
-            existingEnrolment.ParticipantID = updatedEnrolment.ParticipantID;
-            existingEnrolment.EventID = updatedEnrolment.EventID;
-            existingEnrolment.CategoryID = updatedEnrolment.CategoryID;
-
-            if (!string.IsNullOrWhiteSpace(updatedEnrolment.Status))
-            {
-                var allowedStatuses = new[] { "Pending", "Approved", "Rejected", "Cancelled" };
-
-                if (!allowedStatuses.Contains(updatedEnrolment.Status))
-                {
-                    return BadRequest(new
+                    return StatusCode(403, new
                     {
-                        message = "Status must be Pending, Approved, Rejected or Cancelled."
+                        message = "You can only update enrolments for your own events."
                     });
                 }
 
-                existingEnrolment.Status = updatedEnrolment.Status;
+                if (!string.IsNullOrWhiteSpace(updatedEnrolment.Status))
+                {
+                    var allowedStatuses = new[] { "Pending", "Approved", "Rejected", "Cancelled" };
+                    if (!allowedStatuses.Contains(updatedEnrolment.Status))
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Status must be Pending, Approved, Rejected or Cancelled."
+                        });
+                    }
+
+                    existingEnrolment.Status = updatedEnrolment.Status;
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(existingEnrolment);
             }
 
-            await _context.SaveChangesAsync();
+            if (HttpContext.IsParticipant())
+            {
+                if (existingEnrolment.ParticipantID != userId)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "You can only update your own enrolments."
+                    });
+                }
 
-            return Ok(existingEnrolment);
+                if (updatedEnrolment.CategoryID > 0)
+                {
+                    var categoryExists = await _context.Categories
+                        .AnyAsync(c => c.CategoryID == updatedEnrolment.CategoryID
+                                    && c.EventID == existingEnrolment.EventID);
+
+                    if (!categoryExists)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "The category does not belong to the selected event."
+                        });
+                    }
+
+                    existingEnrolment.CategoryID = updatedEnrolment.CategoryID;
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(existingEnrolment);
+            }
+
+            return StatusCode(403, new { message = "You are not allowed to update this enrolment." });
         }
 
         [HttpDelete("{id:int}")]
+        [AuthorizeRole]
         public async Task<IActionResult> DeleteEnrolment(int id)
         {
+            int userId = HttpContext.GetUserId();
+
             var enrolment = await _context.Enrolments
                 .FirstOrDefaultAsync(e => e.EnrolmentID == id);
 
@@ -217,9 +281,25 @@ namespace RaceDayAPI.Controllers
                 return NotFound(new { message = "Enrolment not found." });
             }
 
-            var hasResult = await _context.Results
-                .AnyAsync(r => r.EnrolmentID == id);
+            if (HttpContext.IsParticipant() && enrolment.ParticipantID != userId)
+            {
+                return StatusCode(403, new { message = "You can only delete your own enrolments." });
+            }
 
+            if (HttpContext.IsOrganiser())
+            {
+                bool ownsEvent = await _context.Events
+                    .AnyAsync(ev => ev.EventID == enrolment.EventID && ev.OrganiserID == userId);
+                if (!ownsEvent)
+                {
+                    return StatusCode(403, new
+                    {
+                        message = "You can only delete enrolments for your own events."
+                    });
+                }
+            }
+
+            var hasResult = await _context.Results.AnyAsync(r => r.EnrolmentID == id);
             if (hasResult)
             {
                 return Conflict(new

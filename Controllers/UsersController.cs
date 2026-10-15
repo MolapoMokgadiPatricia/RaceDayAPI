@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
-using RaceDayAPI.Models;
+using RaceDayAPI.Extensions;
 
 namespace RaceDayAPI.Controllers
 {
@@ -17,19 +18,20 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<User>>> GetUsers()
+        [AuthorizeRole("Organiser")]
+        public async Task<IActionResult> GetUsers()
         {
             var users = await _context.Users
                 .AsNoTracking()
-                .Select(user => new User
+                .Select(u => new
                 {
-                    UserID = user.UserID,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    Role = user.Role,
-                    PhoneNumber = user.PhoneNumber,
-                    CreatedAt = user.CreatedAt
+                    u.UserID,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.Role,
+                    u.PhoneNumber,
+                    u.CreatedAt
                 })
                 .ToListAsync();
 
@@ -37,20 +39,28 @@ namespace RaceDayAPI.Controllers
         }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<User>> GetUser(int id)
+        [AuthorizeRole]
+        public async Task<IActionResult> GetUser(int id)
         {
+            int userId = HttpContext.GetUserId();
+
+            if (HttpContext.IsParticipant() && id != userId)
+            {
+                return StatusCode(403, new { message = "You can only view your own profile." });
+            }
+
             var user = await _context.Users
                 .AsNoTracking()
-                .Where(user => user.UserID == id)
-                .Select(user => new User
+                .Where(u => u.UserID == id)
+                .Select(u => new
                 {
-                    UserID = user.UserID,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    Role = user.Role,
-                    PhoneNumber = user.PhoneNumber,
-                    CreatedAt = user.CreatedAt
+                    u.UserID,
+                    u.FirstName,
+                    u.LastName,
+                    u.Email,
+                    u.Role,
+                    u.PhoneNumber,
+                    u.CreatedAt
                 })
                 .FirstOrDefaultAsync();
 
@@ -61,5 +71,84 @@ namespace RaceDayAPI.Controllers
 
             return Ok(user);
         }
+
+        [HttpPut("{id:int}")]
+        [AuthorizeRole]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+        {
+            int userId = HttpContext.GetUserId();
+
+            if (id != userId)
+            {
+                return StatusCode(403, new { message = "You can only update your own profile." });
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserID == id);
+
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.FirstName))
+            {
+                if (request.FirstName.Trim().Length > 50)
+                {
+                    return BadRequest(new
+                    {
+                        message = "First name must not exceed 50 characters."
+                    });
+                }
+
+                user.FirstName = request.FirstName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.LastName))
+            {
+                if (request.LastName.Trim().Length > 50)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Last name must not exceed 50 characters."
+                    });
+                }
+
+                user.LastName = request.LastName.Trim();
+            }
+
+            if (request.PhoneNumber != null)
+            {
+                if (request.PhoneNumber.Length > 20)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Phone number must not exceed 20 characters."
+                    });
+                }
+
+                user.PhoneNumber = request.PhoneNumber.Trim();
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                user.UserID,
+                user.FirstName,
+                user.LastName,
+                user.Email,
+                user.Role,
+                user.PhoneNumber,
+                user.CreatedAt
+            });
+        }
+    }
+
+    public class UpdateUserRequest
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? PhoneNumber { get; set; }
     }
 }

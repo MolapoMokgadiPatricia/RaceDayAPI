@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaceDayAPI.Attributes;
 using RaceDayAPI.Data;
+using RaceDayAPI.Extensions;
 using RaceDayAPI.Models;
 
 namespace RaceDayAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Produces("application/json")]
     public class EventsController : ControllerBase
     {
         private readonly RaceDayContext _context;
@@ -16,69 +19,49 @@ namespace RaceDayAPI.Controllers
             _context = context;
         }
 
-        private int? GetUserID()
-        {
-            return HttpContext.Session.GetInt32("UserID");
-        }
-
-        private string? GetUserRole()
-        {
-            return HttpContext.Session.GetString("Role");
-        }
-
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<IActionResult> GetEvents()
         {
             var events = await _context.Events
                 .AsNoTracking()
+                .Include(e => e.Categories)
                 .OrderBy(e => e.EventDate)
                 .ToListAsync();
 
             return Ok(events);
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetEvent(int id)
         {
             var raceEvent = await _context.Events
                 .AsNoTracking()
+                .Include(e => e.Categories)
                 .FirstOrDefaultAsync(e => e.EventID == id);
 
             if (raceEvent == null)
             {
-                return NotFound(new
-                {
-                    message = "Event not found."
-                });
+                return NotFound(new { message = "Event not found." });
             }
 
             return Ok(raceEvent);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateEvent(
-            [FromBody] Event newEvent)
+        [AuthorizeRole("Organiser")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> CreateEvent([FromBody] Event newEvent)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can create events."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             bool organiserExists = await _context.Organisers
-                .AnyAsync(o => o.OrganiserID == userID.Value);
+                .AnyAsync(o => o.OrganiserID == userId);
 
             if (!organiserExists)
             {
@@ -94,58 +77,37 @@ namespace RaceDayAPI.Controllers
             }
 
             newEvent.EventID = 0;
-            newEvent.OrganiserID = userID.Value;
+            newEvent.OrganiserID = userId;
             newEvent.CreatedAt = DateTime.UtcNow;
 
             _context.Events.Add(newEvent);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(
-                nameof(GetEvent),
-                new { id = newEvent.EventID },
-                newEvent);
+            return CreatedAtAction(nameof(GetEvent), new { id = newEvent.EventID }, newEvent);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEvent(
-            int id,
-            [FromBody] Event updatedEvent)
+        [HttpPut("{id:int}")]
+        [AuthorizeRole("Organiser")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdateEvent(int id, [FromBody] Event updatedEvent)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can update events."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             var existingEvent = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventID == id);
 
             if (existingEvent == null)
             {
-                return NotFound(new
-                {
-                    message = "Event not found."
-                });
+                return NotFound(new { message = "Event not found." });
             }
 
-            if (existingEvent.OrganiserID != userID.Value)
+            if (existingEvent.OrganiserID != userId)
             {
-                return StatusCode(403, new
-                {
-                    message = "You can only update your own events."
-                });
+                return StatusCode(403, new { message = "You can only update your own events." });
             }
 
             if (!ModelState.IsValid)
@@ -166,53 +128,33 @@ namespace RaceDayAPI.Controllers
             return Ok(existingEvent);
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
+        [AuthorizeRole("Organiser")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteEvent(int id)
         {
-            int? userID = GetUserID();
-
-            if (userID == null)
-            {
-                return Unauthorized(new
-                {
-                    message = "Please log in first."
-                });
-            }
-
-            if (GetUserRole() != "Organiser")
-            {
-                return StatusCode(403, new
-                {
-                    message = "Only organisers can delete events."
-                });
-            }
+            int userId = HttpContext.GetUserId();
 
             var raceEvent = await _context.Events
                 .FirstOrDefaultAsync(e => e.EventID == id);
 
             if (raceEvent == null)
             {
-                return NotFound(new
-                {
-                    message = "Event not found."
-                });
+                return NotFound(new { message = "Event not found." });
             }
 
-            if (raceEvent.OrganiserID != userID.Value)
+            if (raceEvent.OrganiserID != userId)
             {
-                return StatusCode(403, new
-                {
-                    message = "You can only delete your own events."
-                });
+                return StatusCode(403, new { message = "You can only delete your own events." });
             }
 
             _context.Events.Remove(raceEvent);
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                message = "Event deleted successfully."
-            });
+            return Ok(new { message = "Event deleted successfully." });
         }
     }
 }

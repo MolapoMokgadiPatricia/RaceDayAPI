@@ -17,13 +17,19 @@ namespace RaceDayAPI.Models
         public string Name { get; set; } = string.Empty;
 
         [Required]
+        [Range(0, 150)]
         public int MinAge { get; set; }
 
         [Required]
+        [Range(0, 150)]
         public int MaxAge { get; set; }
 
         [Required]
+        [Range(0.01, 999.99)]
         [Column(TypeName = "decimal(5,2)")]
         public decimal DistanceKm { get; set; }
+
+        public Event? Event { get; set; }
+        public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }

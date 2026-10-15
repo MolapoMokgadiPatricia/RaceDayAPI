@@ -1,16 +1,15 @@
-
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using RaceDayAPI.Data;
 using RaceDayAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database connection
 builder.Services.AddDbContext<RaceDayContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("RaceDayConnection")));
 
-// Session support
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession(options =>
@@ -18,32 +17,65 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".RaceDay.Session";
 });
-// Password service 
+
 builder.Services.AddScoped<PasswordService>();
-// Add services to the container
+
 builder.Services.AddControllers();
 
-// Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "RaceDay API",
+        Version = "v1",
+        Description = "RESTful API for the RaceDay event management system. Supports Organiser and Participant roles.",
+        Contact = new OpenApiContact { Name = "RaceDay Team" }
+    });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("RaceDayCors", policy =>
+    {
+        policy.WithOrigins("https://localhost:7000", "http://localhost:5000")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<RaceDayContext>();
+    db.Database.EnsureCreated();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RaceDay API v1");
+        c.RoutePrefix = "swagger";
+    });
 }
 
 app.UseHttpsRedirection();
-
-// Enable session
+app.UseCors("RaceDayCors");
 app.UseSession();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

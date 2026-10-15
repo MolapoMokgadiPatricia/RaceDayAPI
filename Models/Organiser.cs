@@ -7,10 +7,14 @@ namespace RaceDayAPI.Models
     public class Organiser
     {
         [Key]
+        [ForeignKey(nameof(User))]
         public int OrganiserID { get; set; }
 
         [Required]
         [StringLength(100)]
         public string OrganisationName { get; set; } = string.Empty;
+
+        public User? User { get; set; }
+        public ICollection<Event> Events { get; set; } = new List<Event>();
     }
 }

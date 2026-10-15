@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RaceDayAPI.Models
@@ -18,9 +18,14 @@ namespace RaceDayAPI.Models
         [Required]
         public int CategoryID { get; set; }
 
-        public DateTime EnrolmentDate { get; set; }
+        public DateTime EnrolmentDate { get; set; } = DateTime.UtcNow;
 
         [StringLength(20)]
-        public string? Status { get; set; }
+        public string? Status { get; set; } = "Pending";
+
+        public Participant? Participant { get; set; }
+        public Event? Event { get; set; }
+        public Category? Category { get; set; }
+        public Result? Result { get; set; }
     }
 }

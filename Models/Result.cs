@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace RaceDayAPI.Models
@@ -15,8 +14,11 @@ namespace RaceDayAPI.Models
 
         public TimeSpan? FinishTime { get; set; }
 
+        [Range(1, int.MaxValue)]
         public int? FinishPosition { get; set; }
 
-        public DateTime RecordedAt { get; set; }
+        public DateTime RecordedAt { get; set; } = DateTime.UtcNow;
+
+        public Enrolment? Enrolment { get; set; }
     }
 }
