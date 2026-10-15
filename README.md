@@ -32,6 +32,10 @@ The platform is built using ASP.NET Core 8, Entity Framework Core 8, and Microso
 
 • GitHub: @MolapoMokgadiPatricia
 
+## PROJECT STRUCTURE 
+<img width="568" height="285" alt="Screenshot 2026-10-15 151249" src="https://github.com/user-attachments/assets/ef74cb3b-5b23-4c40-98b3-39eddbe26ed2" />
+
+
 ## GITHUB ACTION SCREENSHOT 
 <img width="655" height="161" alt="image" src="https://github.com/user-attachments/assets/f3ea904d-003f-4c70-9f27-2e41759b90ed" />
 
