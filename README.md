@@ -23,7 +23,7 @@ The platform is built using ASP.NET Core 8, Entity Framework Core 8, and Microso
 • Source Tracking: Git & GitHub
 
 
-## Project Metadata & Submission Verification
+## STUDENT
 • Author Name: Molapo Mokgadi Patricia
 
 • Student Identification Number: ST10487723
