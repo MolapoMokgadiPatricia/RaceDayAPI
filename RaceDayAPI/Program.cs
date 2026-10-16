@@ -31,7 +31,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "RaceDayAPI",
         Version = "v1",
-        Description = "RESTful API for the RaceDay event management system. Supports Organiser and Participant roles.",
+        Description = "A RestFulAPI for the RaceDay event management system. Supports Organiser and Participant roles.",
         Contact = new OpenApiContact { Name = "RaceDay Team" }
     });
 
