@@ -29,7 +29,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "RaceDay API",
+        Title = "RaceDayAPI",
         Version = "v1",
         Description = "RESTful API for the RaceDay event management system. Supports Organiser and Participant roles.",
         Contact = new OpenApiContact { Name = "RaceDay Team" }
