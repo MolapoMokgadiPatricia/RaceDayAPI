@@ -198,7 +198,8 @@ build-and-test — Sets up .NET 8, restores, builds, and runs all 45 unit tests
 validate-docs — Verifies the /docs folder contains the ERD image and SQL script
 
 # Green Build Screenshot
-https://docs/ci-screenshot.png
+<img width="1358" height="671" alt="image" src="https://github.com/user-attachments/assets/5848c9f6-e159-4c88-91eb-0ecd825f0fa4" />
+
 
 The screenshot above shows a successful CI run with all jobs passing.
 
