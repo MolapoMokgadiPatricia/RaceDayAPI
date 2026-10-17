@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace RaceDayAPI.Models
 {
@@ -29,7 +30,10 @@ namespace RaceDayAPI.Models
         [Column(TypeName = "decimal(5,2)")]
         public decimal DistanceKm { get; set; }
 
+        [JsonIgnore]
         public Event? Event { get; set; }
+
+        [JsonIgnore]
         public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }

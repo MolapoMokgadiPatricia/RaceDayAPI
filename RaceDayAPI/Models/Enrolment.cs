@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace RaceDayAPI.Models
 {
@@ -23,9 +24,16 @@ namespace RaceDayAPI.Models
         [StringLength(20)]
         public string? Status { get; set; } = "Pending";
 
+        [JsonIgnore]
         public Participant? Participant { get; set; }
+
+        [JsonIgnore]
         public Event? Event { get; set; }
+
+        [JsonIgnore]
         public Category? Category { get; set; }
+
+        [JsonIgnore]
         public Result? Result { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace RaceDayAPI.Models
 {
@@ -40,8 +41,13 @@ namespace RaceDayAPI.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        [JsonIgnore]
         public Organiser? Organiser { get; set; }
+
+        [JsonIgnore]
         public ICollection<Category> Categories { get; set; } = new List<Category>();
+
+        [JsonIgnore]
         public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }

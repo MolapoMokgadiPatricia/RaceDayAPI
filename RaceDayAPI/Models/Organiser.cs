@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace RaceDayAPI.Models
 {
@@ -14,7 +15,10 @@ namespace RaceDayAPI.Models
         [StringLength(100)]
         public string OrganisationName { get; set; } = string.Empty;
 
+        [JsonIgnore]
         public User? User { get; set; }
+
+        [JsonIgnore]
         public ICollection<Event> Events { get; set; } = new List<Event>();
     }
 }

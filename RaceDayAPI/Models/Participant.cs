@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace RaceDayAPI.Models
 {
@@ -21,7 +22,10 @@ namespace RaceDayAPI.Models
         [StringLength(500)]
         public string? ProfilePictureUrl { get; set; }
 
+        [JsonIgnore]
         public User? User { get; set; }
+
+        [JsonIgnore]
         public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
     }
 }
