@@ -206,8 +206,8 @@ The screenshot above shows a successful CI run with all jobs passing.
 # Video Demonstration
 An unlisted YouTube video demonstrating the running API is available here:
 
-Watch the Part 2 Demo: https://youtu.be/YOUR_VIDEO_ID_HERE
-
+Watch the Part 2 Demo:
+https://youtu.be/Lb3doyUMJZM?si=au7YkS3nYrJGDP_J
 The video covers:
 
 Project structure and code walkthrough
@@ -254,8 +254,6 @@ The system design, ERD, database schema, and API endpoint plan were produced by 
 
 AI was not used to generate entire files without the student's direct involvement and understanding.
 
-Declaration:
-I confirm that I understand all code submitted in this repository, that the design decisions reflect my own work, and that AI assistance has been limited to guidance, review, and debugging support as described above. I take full responsibility for the correctness and originality of this submission.
 
 References
 Anthropic, 2026. Claude AI assistant [Online]. Available at: https://claude.ai [Accessed 17 October 2026].
