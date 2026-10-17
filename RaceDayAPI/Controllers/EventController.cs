@@ -120,7 +120,8 @@ namespace RaceDayAPI.Controllers
             existingEvent.Location = updatedEvent.Location;
             existingEvent.DistanceKm = updatedEvent.DistanceKm;
             existingEvent.EventType = updatedEvent.EventType;
-            existingEvent.BannerImageUrl = updatedEvent.BannerImageUrl;
+
+            // Removed Description and BannerImageUrl from here
 
             await _context.SaveChangesAsync();
 
