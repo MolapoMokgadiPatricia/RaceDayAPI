@@ -116,7 +116,6 @@ namespace RaceDayAPI.Controllers
             }
 
             existingEvent.Name = updatedEvent.Name;
-            existingEvent.Description = updatedEvent.Description;
             existingEvent.EventDate = updatedEvent.EventDate;
             existingEvent.Location = updatedEvent.Location;
             existingEvent.DistanceKm = updatedEvent.DistanceKm;
